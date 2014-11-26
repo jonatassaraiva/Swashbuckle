@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using Swashbuckle.Application;
 
 namespace Swashbuckle.Swagger
 {
@@ -129,11 +130,11 @@ namespace Swashbuckle.Swagger
                 .Where(propInfo => !propInfo.GetIndexParameters().Any())    // Ignore indexer properties
                 .ToArray();
 
-            var properties = propInfos
-                .ToDictionary(propInfo => propInfo.Name, propInfo => GetOrRegister(propInfo.PropertyType, true, deferredTypes));
+			var properties = propInfos
+                .ToDictionary(propInfo => ToCamelCase(propInfo.Name), propInfo => GetOrRegister(propInfo.PropertyType, true, deferredTypes));
 
             var required = propInfos.Where(propInfo => Attribute.IsDefined(propInfo, typeof (RequiredAttribute)))
-                .Select(propInfo => propInfo.Name)
+                .Select(propInfo => ToCamelCase(propInfo.Name))
                 .ToList();
 
             var subDataTypes = polymorphicType.SubTypes
@@ -141,7 +142,7 @@ namespace Swashbuckle.Swagger
                 .Select(subDataType => subDataType.Ref)
                 .ToList();
 
-            var dataType = new DataType
+			var dataType = new DataType
             {
                 Id = UniqueIdFor(type),
                 Type = "object",
@@ -158,6 +159,14 @@ namespace Swashbuckle.Swagger
 
             return dataType;
         }
+
+		private static string ToCamelCase(string valeu)
+		{
+			if (SwaggerSpecConfig.StaticInstance.IsCamelCase && char.IsUpper(valeu[0]))
+				return string.Format("{0}{1}", char.ToLower(valeu[0]), valeu.Substring(1));
+			else
+				return valeu;
+		}
 
         private static string UniqueIdFor(Type type)
         {
